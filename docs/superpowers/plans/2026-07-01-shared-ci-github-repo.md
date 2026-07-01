@@ -29,7 +29,7 @@ Every task's requirements implicitly include this section. Values are copied ver
 ## Prerequisites (before Task 6)
 
 Before shipping any reusable workflow, confirm:
-- [ ] A **pilot consumer repo** is nominated. Ideally one repo containing both Python and OpenTofu, or one of each. Needs write access for the person executing this plan.
+- [ ] The **pilot consumer repo** created in Task 5.5 exists and is accessible.
 - [ ] `gh` CLI installed and authenticated (`gh auth status` should show a valid token).
 - [ ] `pre-commit` installed locally (`pre-commit --version`), so this repo's own hooks work.
 
@@ -724,6 +724,206 @@ Save the ruleset.
 gh api repos/invest4talent/.github/rules/branches/main
 ```
 Expected: JSON output listing the rules configured above.
+
+---
+
+### Task 5.5: Bootstrap `invest4talent/ci-pilot`
+
+**Files (in a *separate* repository, not this one):**
+- Create GitHub repo: `invest4talent/ci-pilot` (private)
+- Create in that repo: `pyproject.toml`, `uv.lock`, `src/ci_pilot/__init__.py`, `src/ci_pilot/main.py`, `tests/test_main.py`, `infra/main.tf`, `infra/main.tftest.hcl`, `.gitignore`, `README.md`
+
+**Interfaces:**
+- Consumes: nothing.
+- Produces: a purpose-built consumer repository containing minimal-but-realistic Python and OpenTofu content. Tasks 6–10 wire their newly-shipped reusable workflows into this repo and use it to prove each workflow catches its intended failure modes.
+
+- [ ] **Step 1: Create the repo on GitHub**
+
+```bash
+gh repo create invest4talent/ci-pilot --private --description "Pilot repo for testing invest4talent/.github reusable workflows"
+```
+
+- [ ] **Step 2: Clone locally and set up initial structure**
+
+```bash
+cd "$HOME"   # or wherever you keep repos
+gh repo clone invest4talent/ci-pilot
+cd ci-pilot
+```
+
+- [ ] **Step 3: Add `.gitignore`**
+
+```bash
+cat > .gitignore <<'EOF'
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# OpenTofu
+.terraform/
+*.tfstate
+*.tfstate.*
+crash.log
+crash.*.log
+
+# OS
+.DS_Store
+Thumbs.db
+EOF
+```
+
+- [ ] **Step 4: Add `pyproject.toml`** with the ruff `S` rules per `CONTRIBUTING.md` §5
+
+```bash
+cat > pyproject.toml <<'EOF'
+[project]
+name = "ci-pilot"
+version = "0.1.0"
+description = "Pilot for testing invest4talent/.github reusable workflows"
+requires-python = ">=3.12"
+
+[dependency-groups]
+dev = [
+  "mypy>=1.10",
+  "pytest>=8.0",
+  "ruff>=0.6",
+  "pip-audit>=2.7",
+]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "S"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**/*.py" = ["S101"]  # pytest uses `assert`
+
+[tool.mypy]
+strict = true
+files = ["src", "tests"]
+EOF
+```
+
+- [ ] **Step 5: Add trivial source + test**
+
+```bash
+mkdir -p src/ci_pilot tests
+cat > src/ci_pilot/__init__.py <<'EOF'
+EOF
+cat > src/ci_pilot/main.py <<'EOF'
+def greet(name: str) -> str:
+    return f"Hello, {name}!"
+EOF
+cat > tests/test_main.py <<'EOF'
+from ci_pilot.main import greet
+
+
+def test_greet_uses_name() -> None:
+    assert greet("world") == "Hello, world!"
+EOF
+```
+
+- [ ] **Step 6: Generate `uv.lock`**
+
+```bash
+uv sync --dev
+git status  # confirm uv.lock was generated
+```
+
+- [ ] **Step 7: Add a minimal OpenTofu module + smoke test**
+
+```bash
+mkdir -p infra
+cat > infra/main.tf <<'EOF'
+terraform {
+  required_version = ">= 1.9.0"
+  required_providers {
+    random = {
+      source  = "hashicorp/random"
+      version = "~> 3.6"
+    }
+  }
+}
+
+variable "prefix" {
+  type        = string
+  description = "Prefix for generated names"
+  default     = "ci-pilot"
+}
+
+resource "random_pet" "example" {
+  prefix = var.prefix
+}
+
+output "pet_name" {
+  value = random_pet.example.id
+}
+EOF
+
+cat > infra/main.tftest.hcl <<'EOF'
+run "generates_pet_name_with_prefix" {
+  command = plan
+
+  assert {
+    condition     = startswith(random_pet.example.prefix, "ci-pilot") || var.prefix == "ci-pilot"
+    error_message = "Default prefix should be ci-pilot"
+  }
+}
+EOF
+```
+
+- [ ] **Step 8: Add a minimal `README.md`**
+
+```bash
+cat > README.md <<'EOF'
+# ci-pilot
+
+Pilot repository for verifying the reusable workflows in `invest4talent/.github`.
+
+Contains minimal Python (`src/ci_pilot`) and OpenTofu (`infra/`) content so every
+reusable workflow can be exercised on a real consumer without setting up a
+production project.
+
+Do not deploy this repo. It is CI-only.
+EOF
+```
+
+- [ ] **Step 9: Sanity-check locally before pushing**
+
+Run each check to confirm the pilot is green *before* CI ever runs:
+```bash
+uv run ruff check .
+uv run ruff format --check .
+uv run mypy
+uv run pytest -q
+uv run pip-audit
+
+# Requires tofu and tflint installed locally; skip if not available
+cd infra
+tofu fmt -check -recursive
+tofu init -backend=false
+tofu validate
+tofu test
+cd ..
+```
+All commands should exit 0. Fix any failures before proceeding.
+
+- [ ] **Step 10: Initial commit and push**
+
+```bash
+git add .
+git commit -m "chore: initial pilot content — python module and tofu smoke test"
+git push origin main
+```
+
+- [ ] **Step 11: Confirm the repo is ready for Task 6**
+
+```bash
+gh repo view invest4talent/ci-pilot
+```
+Expected: private repo, default branch `main`, one commit. The pilot is now the reference consumer for Tasks 6–10.
 
 ---
 
@@ -1583,7 +1783,7 @@ If any are unmet, v1 is not done. Land the fixes and re-check.
 | §6.4 branch + tag protection on this repo | Task 5 (branch), Task 12 (tag ruleset) |
 | §7 consumer integration pattern | Task 3 (documented), Tasks 6–10 (each tested against pilot) |
 | §8 skill alignment | Encoded in workflow contents (Tasks 5–10) and CONTRIBUTING.md (Task 3) |
-| §9 rollout phases | Tasks map 1:1 onto phases (Phase 1 → Tasks 1–4, Phase 2 → Task 5, Phase 3 → Tasks 6–10, Phase 4 → Task 11, Phase 5 → Task 14, Phase 6 → Tasks 12–13) |
+| §9 rollout phases | Tasks map onto phases (Phase 1 → Tasks 1–4, Phase 2 → Task 5, pilot bootstrap → Task 5.5, Phase 3 → Tasks 6–10, Phase 4 → Task 11, Phase 5 → Task 14, Phase 6 → Tasks 12–13) |
 | §10 placeholders | Explicitly checked in Task 14 acceptance criteria |
 
 Every spec requirement maps to at least one task.
