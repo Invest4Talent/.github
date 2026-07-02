@@ -188,6 +188,8 @@ Drop a `.gitleaks.toml` at the repo root to allowlist false-positive matches. Ho
 
 Invest4Talent is on a free org plan, so we cannot ship a central ruleset. Every repository owner runs this once per repo.
 
+**Plan constraint (read this first):** GitHub's free plan only allows branch rulesets / protection on **public** repositories. If your repo is public, follow the ruleset below. If your repo is **private and the org is still on the free plan**, the CI checks (`secrets / scan`, `pr-title / lint`, `commits / lint`, and any language-specific ones) still run on every PR — but you cannot mark them as required for merge. Rely on team discipline (do not merge red PRs, use the Conventional Commits git hook, review before merging) until the org upgrades to a paid plan (Team / Enterprise Cloud), at which point rulesets on private repos unlock and the section below applies unchanged. Shared workflow repos like `Invest4Talent/.github` itself are typically public for this reason.
+
 ```
 Go to repo → Settings → Branches → Add branch ruleset targeting `main`:
 

@@ -355,7 +355,7 @@ jobs:
 
 ### 7.2 Consumer branch protection ruleset
 
-Free plan cannot push rulesets centrally. Each repo owner runs this once:
+Free plan cannot push rulesets centrally. Each repo owner runs this once. **Important free-plan caveat:** branch rulesets and classic branch protection are only available on **public** repositories on the free plan. Private consumer repos on the free plan cannot mark checks as required for merge — the CI still runs on every PR, but merge blocking is discipline-based until the org upgrades to Team (or the repo is made public). This is why `Invest4Talent/.github` itself is public; consumer repos that hold shared/module templates should typically be public too, while private app repos should either upgrade the plan or lean on PR review discipline.
 
 ```
 Go to repo → Settings → Branches → Add branch ruleset targeting `main`:
