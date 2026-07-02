@@ -1042,8 +1042,6 @@ Wait for CI. `gh pr checks` should show `secrets / scan` = **failure**. Confirm 
 **Clean up — reverting is not enough** because `fetch-depth: 0` scans the full git history; the planted-secret commit is still visible on the branch even after a revert. Either:
 - Close and delete the PR (cleanest, no force-push needed) and start Task 7's wiring on a fresh branch, OR
 - If keeping the branch is important: `git reset --hard <commit-before-plant> && git push --force-with-lease` (needs force-push permission on your session and remote).
-# then close the PR, delete the branch
-```
 
 ---
 
