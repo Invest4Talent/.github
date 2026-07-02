@@ -780,6 +780,10 @@ EOF
 
 ```bash
 cat > pyproject.toml <<'EOF'
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
 [project]
 name = "ci-pilot"
 version = "0.1.0"
