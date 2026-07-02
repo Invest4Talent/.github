@@ -396,6 +396,14 @@ on:
   push:
     branches: [main]
 
+# Callers MUST grant these top-level scopes explicitly — GitHub reusable
+# workflows can only narrow the caller's permissions, never expand them.
+# `pull-requests: read` is required by pr-title-lint and commit-lint so they
+# can inspect the PR context. `contents: read` covers checkout for every job.
+permissions:
+  contents: read
+  pull-requests: read
+
 jobs:
   # ─── BASELINE — required for every repo ──────────────────────
   secrets:
