@@ -1154,7 +1154,7 @@ Restore the title, close/merge/cleanup as appropriate for the pilot.
 - Consumes: nothing.
 - Produces: reusable workflow `commit-lint.yml`:
   - Trigger: `on: workflow_call`
-  - Permissions: `contents: read`
+  - Permissions: `contents: read`, `pull-requests: read` (the underlying action calls the GitHub API to list PR commits; `contents: read` alone yields "Resource not accessible by integration")
   - Job: `lint` — check name pattern `<caller-job-name> / lint`
   - **Event-context caveat:** same as `pr-title-lint.yml` — call from `on: pull_request`.
 
@@ -1169,6 +1169,7 @@ on:
 
 permissions:
   contents: read
+  pull-requests: read
 
 jobs:
   lint:
@@ -1178,37 +1179,35 @@ jobs:
       - uses: actions/checkout@<SHA>  # <tag>
         with:
           fetch-depth: 0
+      - name: Write shared commitlint config to workspace
+        run: |
+          cat > "$GITHUB_WORKSPACE/commitlint.config.mjs" <<'EOF'
+          export default {
+            rules: {
+              "type-enum": [2, "always",
+                ["feat","fix","docs","style","refactor","test","chore","ci","revert"]],
+              "subject-case": [2, "always", "lower-case"],
+              "subject-full-stop": [2, "never", "."],
+              "type-empty": [2, "never"],
+              "subject-empty": [2, "never"],
+            },
+          };
+          EOF
       - name: Lint commit messages
         uses: wagoid/commitlint-github-action@<SHA>  # <tag>
         with:
-          configFile: .github/commitlint.config.js
+          configFile: commitlint.config.mjs
           failOnWarnings: true
 ```
 
-- [ ] **Step 2: Ship the shared commitlint config**
+- [ ] **Step 2: Config strategy — write to workspace before the Docker action runs**
 
-The action reads `.github/commitlint.config.js` **from the calling repository** (that is where the source is checked out). To avoid every consumer copying a config, embed the config inline instead. Rewrite Step 1's workflow to skip `configFile` and pass rules via `commitlint`'s CLI env:
+`wagoid/commitlint-github-action` is a Docker action with no inline-config env variable (verified against the action's README — no `COMMITLINT_CONFIG` support). The two viable options are:
 
-Replace the `Lint commit messages` step with:
-```yaml
-      - name: Lint commit messages
-        uses: wagoid/commitlint-github-action@<SHA>  # <tag>
-        with:
-          # Rules embedded here so consumers do not need a config file
-          configFile: ""
-        env:
-          COMMITLINT_CONFIG: |
-            {
-              "extends": ["@commitlint/config-conventional"],
-              "rules": {
-                "type-enum": [2, "always",
-                  ["feat","fix","docs","style","refactor","test","chore","ci","revert"]],
-                "subject-case": [2, "always", "lower-case"],
-                "subject-full-stop": [2, "never", "."]
-              }
-            }
-```
-**Verify at Step 4 that `wagoid/commitlint-github-action` supports `COMMITLINT_CONFIG` env at the pinned version — check the action's README.** If it does not, fall back to shipping `.github/commitlint.config.js` as a required file in the *shared* repo and pointing `configFile:` at an absolute path relative to `${{ github.workspace }}` — or accept that every consumer ships their own config, and document that in `CONTRIBUTING.md` §4.
+- **(chosen) Write config into `$GITHUB_WORKSPACE` with a `run:` step before the Docker action.** The container mounts the workspace so the file is visible, and no consumer needs to ship a config. This is the approach embedded in Step 1's YAML above.
+- **(rejected) Require every consumer to ship `.github/commitlint.config.mjs`.** More friction; documentation drift risk. Only fall back to this if the workspace-write approach breaks in a future action release.
+
+Nothing extra to write here — the workflow in Step 1 already does this.
 
 - [ ] **Step 3: Commit, PR, wait for self-ci, merge**
 

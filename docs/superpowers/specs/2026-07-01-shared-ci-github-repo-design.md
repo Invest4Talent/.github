@@ -150,10 +150,10 @@ Structure follows the `github-actions-cicd` skill: separate jobs with a `needs:`
 ### 4.5 `commit-lint.yml`
 
 **Trigger:** `workflow_call`
-**Permissions:** `contents: read`
+**Permissions:** `contents: read`, `pull-requests: read` (the action calls the GitHub API to list PR commits; `contents: read` alone raises "Resource not accessible by integration")
 **Timeout:** 3 min
 
-**Job — `lint`:** `actions/checkout@<sha>` with `fetch-depth: 0` → `wagoid/commitlint-github-action@<sha>` with an inline config matching the allowed types.
+**Job — `lint`:** `actions/checkout@<sha>` with `fetch-depth: 0` → a `run:` step that writes the shared `commitlint.config.mjs` into `$GITHUB_WORKSPACE` (so the Dockerised action can pick it up without every consumer shipping a config file) → `wagoid/commitlint-github-action@<sha>` pointing at that config. Rules enforce the allowed 9 types, lowercase subject, no trailing period.
 
 ## 5. Foundation files
 
