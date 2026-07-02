@@ -1179,26 +1179,28 @@ jobs:
       - uses: actions/checkout@<SHA>  # <tag>
         with:
           fetch-depth: 0
-      - name: Write shared commitlint config to workspace
+
+      - name: Write commitlint config
         run: |
-          cat > "$GITHUB_WORKSPACE/commitlint.config.mjs" <<'EOF'
-          export default {
-            rules: {
-              "type-enum": [2, "always",
-                ["feat","fix","docs","style","refactor","test","chore","ci","revert"]],
-              "subject-case": [2, "always", "lower-case"],
-              "subject-full-stop": [2, "never", "."],
-              "type-empty": [2, "never"],
-              "subject-empty": [2, "never"],
-            },
-          };
-          EOF
+          printf '%s\n' \
+            'export default {' \
+            '  extends: ["@commitlint/config-conventional"],' \
+            '  rules: {' \
+            '    "type-enum": [2, "always", ["feat","fix","docs","style","refactor","test","chore","ci","revert"]],' \
+            '    "subject-case": [2, "always", "lower-case"],' \
+            '    "subject-full-stop": [2, "never", "."]' \
+            '  }' \
+            '};' \
+            > "$GITHUB_WORKSPACE/commitlint.config.mjs"
+
       - name: Lint commit messages
         uses: wagoid/commitlint-github-action@<SHA>  # <tag>
         with:
           configFile: commitlint.config.mjs
           failOnWarnings: true
 ```
+
+`extends: ["@commitlint/config-conventional"]` pulls in `type-empty` and `subject-empty` as `[2, "never"]` defaults, so an empty-type message like `bad message without type` fails both rules without needing them listed here. The explicit rules above only override or add to that baseline.
 
 - [ ] **Step 2: Config strategy — write to workspace before the Docker action runs**
 
