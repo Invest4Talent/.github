@@ -1027,19 +1027,21 @@ In the pilot repo PR, `gh pr checks` should show `secrets / scan` = success.
 
 - [ ] **Step 6: Verify fail on planted secret**
 
-In the pilot repo test branch, add a fake AWS-style secret to some file:
+In the pilot repo test branch, add a fake AWS-style secret to some file. **Do not use `AKIAIOSFODNN7EXAMPLE`** — gitleaks' shipped config explicitly allowlists any AWS key ending in `EXAMPLE` (regex `.+EXAMPLE$`). Similarly, use only characters from the base32 alphabet (`A–Z2–7`); digits like `0`, `1`, `8`, `9` are not in the AWS-key character class and won't match:
 ```bash
-echo 'AWS_SECRET_ACCESS_KEY = "AKIAIOSFODNN7EXAMPLE"' > test-secret.txt
+cat > test-secret.txt <<'EOF'
+# DO NOT COMMIT REAL SECRETS. This is a fake for gitleaks CI verification.
+AWS_ACCESS_KEY_ID = "AKIAZXCVBNMLKJHGFDSA"  # gitleaks:allow
+EOF
 git add test-secret.txt
-git commit -m "test: plant a fake secret for verification"
+git commit -m "test: plant fake AWS-style secret for verification"
 git push
 ```
-Wait for CI. `gh pr checks` should show `secrets / scan` = **failure**. Confirm the failing step's log names the file (redacted).
+Wait for CI. `gh pr checks` should show `secrets / scan` = **failure**. Confirm the failing step's log shows `leaks found: 1` and exit code 2. (The `--redact` flag intentionally hides secret values AND filenames from default INFO-level output — the leak count plus non-zero exit is your evidence.)
 
-Clean up:
-```bash
-git revert HEAD
-git push
+**Clean up — reverting is not enough** because `fetch-depth: 0` scans the full git history; the planted-secret commit is still visible on the branch even after a revert. Either:
+- Close and delete the PR (cleanest, no force-push needed) and start Task 7's wiring on a fresh branch, OR
+- If keeping the branch is important: `git reset --hard <commit-before-plant> && git push --force-with-lease` (needs force-push permission on your session and remote).
 # then close the PR, delete the branch
 ```
 
