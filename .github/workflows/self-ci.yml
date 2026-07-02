@@ -18,10 +18,14 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
       - name: Install actionlint
+        env:
+          ACTIONLINT_VERSION: "1.7.12"
+          ACTIONLINT_SHA: "914e7df21a07ef503a81201c76d2b11c789d3fca"
         run: |
-          bash <(curl -fsSL https://raw.githubusercontent.com/rhysd/actionlint/914e7df21a07ef503a81201c76d2b11c789d3fca/scripts/download-actionlint.bash) 1.7.12
+          base="https://raw.githubusercontent.com/rhysd/actionlint/${ACTIONLINT_SHA}"
+          bash <(curl -fsSL "${base}/scripts/download-actionlint.bash") "${ACTIONLINT_VERSION}"
       - name: Run actionlint
         run: ./actionlint -color
 
@@ -29,9 +33,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
       - name: Run yamllint
-        uses: ibiqlik/action-yamllint@2576378a8e339169678f9939646ee3ee325e845c # v3.1.1
+        uses: ibiqlik/action-yamllint@2576378a8e339169678f9939646ee3ee325e845c  # v3.1.1
         with:
           config_data: |
             extends: default
