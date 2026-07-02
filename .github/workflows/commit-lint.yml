@@ -1,0 +1,35 @@
+name: commit-lint
+
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
+        with:
+          fetch-depth: 0
+
+      - name: Write commitlint config
+        run: |
+          printf '%s\n' \
+            'export default {' \
+            '  extends: ["@commitlint/config-conventional"],' \
+            '  rules: {' \
+            '    "type-enum": [2, "always", ["feat","fix","docs","style","refactor","test","chore","ci","revert"]],' \
+            '    "subject-case": [2, "always", "lower-case"],' \
+            '    "subject-full-stop": [2, "never", "."]' \
+            '  }' \
+            '};' \
+            > "$GITHUB_WORKSPACE/commitlint.config.mjs"
+
+      - name: Lint commit messages
+        uses: wagoid/commitlint-github-action@b948419dd99f3fd78a6548d48f94e3df7f6bf3ed  # v6.2.1
+        with:
+          configFile: commitlint.config.mjs
+          failOnWarnings: true
