@@ -8,9 +8,6 @@ on:
         required: true
         type: string
 
-permissions:
-  contents: write
-
 concurrency:
   group: ${{ github.workflow }}-release-${{ inputs.version }}
   cancel-in-progress: false
@@ -19,6 +16,15 @@ jobs:
   release:
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    permissions:
+      contents: write
+    # The `version` input is mapped into the shell via `env:` on every step
+    # that uses it. Never interpolate `${{ inputs.version }}` directly into
+    # a `run:` script — that expansion happens BEFORE the shell parses the
+    # script, so a malformed input can inject arbitrary commands.
+    # See https://securitylab.github.com/research/github-actions-untrusted-input/
+    env:
+      VERSION: ${{ inputs.version }}
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
         with:
@@ -26,15 +32,15 @@ jobs:
 
       - name: Validate version format
         run: |
-          if ! [[ "${{ inputs.version }}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-            echo "Version must match vX.Y.Z (got: ${{ inputs.version }})"
+          if ! [[ "$VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "Version must match vX.Y.Z (got: $VERSION)"
             exit 1
           fi
 
       - name: Verify version does not already exist
         run: |
-          if git rev-parse "${{ inputs.version }}" >/dev/null 2>&1; then
-            echo "Tag ${{ inputs.version }} already exists"
+          if git rev-parse "$VERSION" >/dev/null 2>&1; then
+            echo "Tag $VERSION already exists"
             exit 1
           fi
 
@@ -45,12 +51,11 @@ jobs:
 
       - name: Create immutable tag
         run: |
-          git tag -a "${{ inputs.version }}" -m "release ${{ inputs.version }}"
-          git push origin "${{ inputs.version }}"
+          git tag -a "$VERSION" -m "release $VERSION"
+          git push origin "$VERSION"
 
       - name: Move major tag
         run: |
-          VERSION="${{ inputs.version }}"
           MAJOR="${VERSION%%.*}"
           git tag -f "$MAJOR" "$VERSION"
           git push -f origin "$MAJOR"
