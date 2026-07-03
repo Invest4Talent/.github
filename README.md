@@ -37,6 +37,10 @@ jobs:
 - Pin `@v1` (floating major) — non-breaking updates automatically
 - Breaking changes cut a new major (`v2`); consumers opt in
 
+## Verifying the CI still works
+
+See [`TESTING.md`](TESTING.md) — runbook for pilot verifications, release dry-runs, and ruleset drift checks. Not needed on the happy path; kept for post-refactor or post-incident sanity.
+
 ## Security
 
 See [`SECURITY.md`](SECURITY.md) — do not open public issues for vulnerabilities.

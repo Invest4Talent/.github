@@ -1,0 +1,18 @@
+# Gitleaks configuration for Invest4Talent/.github
+# See https://github.com/gitleaks/gitleaks#configuration
+#
+# The file is respected by:
+#   - The reusable `secret-scan.yml` workflow (it runs `gitleaks detect --source .`)
+#   - The local `scan-secrets.sh` Claude hook (it runs `gitleaks dir <file>`)
+# See CONTRIBUTING.md §8 for consumer guidance on adding this file.
+
+[extend]
+# Keep gitleaks' shipped rule set (AWS keys, GitHub tokens, private keys, etc.)
+useDefault = true
+
+# Repo-level allowlist. Each entry is a regex against file path.
+[[allowlists]]
+description = "Allow fake AKIA-style example strings inside TESTING.md — they are documentation of how to plant a fake secret for CI verification, not actual credentials."
+paths = [
+    '''TESTING\.md''',
+]
