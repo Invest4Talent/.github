@@ -192,6 +192,17 @@ updates:
 
 Drop a `.gitleaks.toml` at the repo root to allowlist false-positive matches. Honoured by both the local `scan-secrets.sh` Claude hook and the reusable `secret-scan.yml` workflow — one file covers both.
 
+### When `secrets / scan` fires on a real secret
+
+The `secret-scan.yml` workflow checks out with `fetch-depth: 0` and runs `gitleaks detect` against the full git history, not the current working tree. That has one consequence you need to know before you try to fix a red check:
+
+1. **Rotate the secret first.** Do this in the upstream system (rotate the AWS key, revoke the token, replace the password, etc.) before touching git. Anything committed to a repo is compromised the moment it lands — a fix on your side does not undo that.
+2. **A `git revert` will NOT clear the check.** The revert removes the file from the working tree, but the plant commit is still in the branch history that gitleaks walks. Every subsequent CI run keeps failing.
+3. **Rewrite the history to remove the plant commit.** Two options:
+   - If your session/branch protection allows force-push: `git reset --hard <commit-before-plant> && git push --force-with-lease`.
+   - Otherwise: close the current PR, delete the branch, and reopen from a fresh branch that starts at the pre-plant commit.
+4. **If the false positive is intentional test content** (like a doc example that references a fake key), add a `gitleaks:allow` inline comment on the line, or an allowlist entry in `.gitleaks.toml` at the repo root.
+
 ## 9. Branch protection ruleset (per repo)
 
 Invest4Talent is on a free org plan, so we cannot ship a central ruleset. Every repository owner runs this once per repo.

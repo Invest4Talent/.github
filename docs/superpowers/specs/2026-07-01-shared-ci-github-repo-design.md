@@ -581,11 +581,13 @@ Only after all five reusables have been exercised end-to-end via the pilot.
 
 ## 10. Open questions / placeholders
 
-Content owners need to supply:
-- `profile/README.md` — org mission, product links, careers, external contact
-- `SECURITY.md` — vulnerability disclosure email
-- `CODE_OF_CONDUCT.md` — enforcement contact
-- `.github/ISSUE_TEMPLATE/config.yml` — external contact links (security policy link at minimum)
+Content owners need to supply — **seven `<TODO: supply real value>` markers across three files** at the time of writing:
+
+- `SECURITY.md` (1 marker) — vulnerability disclosure email
+- `CODE_OF_CONDUCT.md` (1 marker) — enforcement contact email
+- `profile/README.md` (5 markers) — one-sentence mission statement, short paragraph on products/services, list of key public repos, careers URL, public contact email or form URL
+
+`.github/ISSUE_TEMPLATE/config.yml` ships with a concrete link to this repo's `SECURITY.md` and needs no content-owner input.
 
 Team decisions to confirm during Phase 5:
 - Merge strategy (squash-merge vs merge commit vs rebase) — affects whether `commit-lint.yml` is strictly required for consumers and whether "Require linear history" makes sense
